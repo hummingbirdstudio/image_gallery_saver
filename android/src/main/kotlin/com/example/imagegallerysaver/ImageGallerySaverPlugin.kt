@@ -42,6 +42,7 @@ class ImageGallerySaverPlugin : FlutterPlugin, MethodCallHandler {
                 val image = call.argument<ByteArray?>("imageBytes")
                 val quality = call.argument<Int?>("quality")
                 val name = call.argument<String?>("name")
+                val imageType = call.argument<String?>("imageType")
 
                 result.success(
                     saveImageToGallery(
@@ -49,7 +50,10 @@ class ImageGallerySaverPlugin : FlutterPlugin, MethodCallHandler {
                             image ?: ByteArray(0),
                             0,
                             image?.size ?: 0
-                        ), quality, name
+                        ),
+                        quality,
+                        name,
+                        imageType
                     )
                 )
             }
@@ -72,7 +76,7 @@ class ImageGallerySaverPlugin : FlutterPlugin, MethodCallHandler {
     private fun generateUri(extension: String = "", name: String? = null): Uri? {
         var fileName = name ?: System.currentTimeMillis().toString()
         val mimeType = getMIMEType(extension)
-        val isVideo = mimeType?.startsWith("video")==true
+        val isVideo = mimeType?.startsWith("video") == true
 
         return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             // >= android 10
@@ -90,9 +94,12 @@ class ImageGallerySaverPlugin : FlutterPlugin, MethodCallHandler {
                     }
                 )
                 if (!TextUtils.isEmpty(mimeType)) {
-                    put(when {isVideo -> MediaStore.Video.Media.MIME_TYPE
-                        else -> MediaStore.Images.Media.MIME_TYPE
-                    }, mimeType)
+                    put(
+                        when {
+                            isVideo -> MediaStore.Video.Media.MIME_TYPE
+                            else -> MediaStore.Images.Media.MIME_TYPE
+                        }, mimeType
+                    )
                 }
             }
 
@@ -148,7 +155,8 @@ class ImageGallerySaverPlugin : FlutterPlugin, MethodCallHandler {
     private fun saveImageToGallery(
         bmp: Bitmap?,
         quality: Int?,
-        name: String?
+        name: String?,
+        imageType: String?
     ): HashMap<String, Any?> {
         // check parameters
         if (bmp == null || quality == null) {
@@ -161,12 +169,16 @@ class ImageGallerySaverPlugin : FlutterPlugin, MethodCallHandler {
         var fos: OutputStream? = null
         var success = false
         try {
-            fileUri = generateUri("png", name = name)
+            fileUri = generateUri(imageType ?: "jpg", name = name)
             if (fileUri != null) {
                 fos = context.contentResolver.openOutputStream(fileUri)
                 if (fos != null) {
                     println("ImageGallerySaverPlugin $quality")
-                    bmp.compress(Bitmap.CompressFormat.JPEG, quality, fos)
+                    val imageFormat = when (imageType) {
+                        "png" -> Bitmap.CompressFormat.PNG
+                        else -> Bitmap.CompressFormat.JPEG
+                    }
+                    bmp.compress(imageFormat, quality, fos)
                     fos.flush()
                     success = true
                 }
