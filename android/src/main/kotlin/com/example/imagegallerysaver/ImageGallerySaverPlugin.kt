@@ -161,7 +161,7 @@ class ImageGallerySaverPlugin : FlutterPlugin, MethodCallHandler {
         var fos: OutputStream? = null
         var success = false
         try {
-            fileUri = generateUri("jpg", name = name)
+            fileUri = generateUri("png", name = name)
             if (fileUri != null) {
                 fos = context.contentResolver.openOutputStream(fileUri)
                 if (fos != null) {
